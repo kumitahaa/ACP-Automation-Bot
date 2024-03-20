@@ -1,5 +1,5 @@
 # --------------------------------- Import -------------------------------------
-import time, yaml, pandas as pd, random
+import time, yaml, pandas as pd, random, traceback
 from selenium import webdriver as uc
 from datetime import datetime
 from selenium.webdriver.common.by import By
@@ -14,14 +14,12 @@ final_text = ""
 driver = ""
 df = ""
 line_break = "=" * 60
-
 def get_data_from_csv():
     global df
-    df = pd.read_csv("person.csv")
+    df = pd.read_csv("filtered.csv", )
     print(df.head())
 
-
-# --------------------------------- Initialize if not VPN -------------------------------------
+# --------------------------------- Initialize -------------------------------------
 def init():
     print("Start of INIT Fucntion...")
     print(line_break)
@@ -34,20 +32,40 @@ def init():
 # --------------------------------- Starts from Here -------------------------------------
 def start():
     global df
+    coming_message = """Error
+Transferring ACP benefit failed. You can update your information and try again.
+Ok"""
     for index, person in df.iterrows():
     # Process one row at a time
-        print(f"Processin {index+1}th Record")
+        print(f"Processing {index+1}th Record")
         print(person)
         open_page()
         login(person)
-        page_1(person)
+        coming_enrollment_id = page_1(person)
+        print(coming_enrollment_id)
         page_2()
         consent_form()
         consent_popup()
-        digital_sign(person)
-        message = post_popup()
+        digital_sign()
+        coming_message = post_popup()
+        print(f"Message from pop_up: {coming_message}")
+        device_type_page()
+        success_page()
+
+        print("=="*60)
+        print("=="*60)
+        message = coming_message.split("\n")[1]
+        print(f"Message from pop_up: {message}")
+        enrollment_id = coming_enrollment_id.split(": ")[-1]
+        print(f"EnrollmentID: {enrollment_id}")
+        print("=="*60)
+        print("=="*60)
         # Write to new Column
+        print("=="*50)
         df.loc[index, 'result_message'] = message
+        print(df.loc[index, 'result_message'])
+        df.loc[index, 'enrollment_id'] = enrollment_id
+        print(df.loc[index, 'enrollment_id'])
     # Save the csv at the FINALLY BLOCK
 
 # --------------------------------- Open WebPage -------------------------------------
@@ -77,10 +95,10 @@ def login(person):
     print("Start of LOGIN Fucntion...")
     print("="*70)
     try:
-        zip_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((
-            By.ID, "mat-input-0")))
-        email_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((
-            By.ID, "mat-input-1")))
+        zip_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[1]/div[1]/div/div[2]/input")))
+        email_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[2]/div[1]/div/div[2]/input")))
         
         zip_code = person["zip"]
         zip_field.send_keys("")
@@ -88,19 +106,35 @@ def login(person):
         email_addrs = person["email"]
         email_field.send_keys("")
         email_field.send_keys(email_addrs)
-        time.sleep(5)
-        submit_btn = WebDriverWait(driver, 20).until(EC.presence_of_element_located((
+        time.sleep(9)
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
+        # Check if plans are clickable.
+        try:
+            print("Checking if Radio Button is clickable.")
+            priority_plan = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((
+            By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-radio-group/mat-radio-button[2]/div/div/input")))
+            time.sleep(1)
+            priority_plan.click()
+        except TimeoutException:
+            print("Priority Plan Cannot be selected, continue with default.")
+        
         submit_btn.click()
     except TimeoutException:
-        print("Fields not there... Trying again.")
-        login(person)
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[1]/mat-form-field/div[1]/div/div[2]/input")))
+            print("We are already on Page 1. Ending Login Here...")
+            return 0
+        except:
+            print("Fields not there... Trying again.")
+            login(person)
     
     # Check if next page appeared
     try:
         time.sleep(2)
-        WebDriverWait(driver, 20).until(EC.presence_of_element_located((
-            By.ID, "mat-input-0"))).send_keys("test")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[2]/div[1]/div/div[2]/input"))).send_keys("test")
         print("Calling Login Again, still on start page.")
         email_field.clear()
         login(person)
@@ -113,17 +147,28 @@ def login(person):
 def page_1(person):
     print("Start of PAGE # 1 Fucntion...")
     print("="*70)
+    enrollment_id = "Your Enrollment ID: N/A"
     try:
-        first_name = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
-        last_name = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-4")))
-        ssn = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-10")))
+        first_name = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[1]/mat-form-field/div[1]/div/div[2]/input")))
+        last_name = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[3]/mat-form-field/div[1]/div/div[2]/input")))
+        ssn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[2]/div[3]/mat-form-field/div[1]/div/div[2]/input")))
 
-        personal_contact_number = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-6")))
+        personal_contact_number = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[1]/mat-card-content/contact-info/div/mat-form-field/div[1]/div/div[2]/input")))
         
-        address_element = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-11")))
+        address_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
         
-        submit_btn = WebDriverWait(driver, 20).until(EC.presence_of_element_located((
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[4]/button")))
+        
+        enrollment_id = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/div/span"))).text
+        
+
         first = person["first"]
         first_name.send_keys("")
         first_name.send_keys(first)
@@ -151,20 +196,35 @@ def page_1(person):
         print("Entered Address.")
         time.sleep(1)
 
-        print("Waiting for date.")
-        time.sleep(15)
+        dob_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[2]/div[1]/mat-form-field/div[1]/div/div[2]/input")))
+        dob_field_id = dob_field.get_attribute("id")
+        driver.execute_script(f"""
+
+            var dobField = document.getElementById("{dob_field_id}");
+            dobField.readOnly = false;
+            console.log("DOB now accepts Input..");
+""")
+        time.sleep(2)
+        dob = person.dob
+        dob_field.send_keys(dob)
+        print("DOB entered.")
+
+        time.sleep(2)
         submit_btn.click()
         print("clicked submit")
         time.sleep(3)
         
         try:
             print("Checking if adrs bar is there.")
-            WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, "mat-input-11")))
+            WebDriverWait(driver, 3).until(EC.presence_of_element_located((
+                By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
             valid = validate_address()
             if not valid:
+                time.sleep(4)
                 submit_btn.click()
                 print("Submitted...")
-        except TimeoutError:
+        except TimeoutException:
             # print("Submitted...")
             print("Address perfectly validated.")
             valid = False
@@ -173,7 +233,8 @@ def page_1(person):
             print("Inside the While Loop")
             try:
                 time.sleep(5)
-                WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, "mat-input-11")))
+                WebDriverWait(driver, 3).until(EC.presence_of_element_located((
+                    By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
                 print("Address not Validated... Clicking DON'T VALIDATE...")
                 valid = validate_address()
             except:
@@ -181,12 +242,18 @@ def page_1(person):
                 print("Address perfectly validated.")
                 valid = False
     except TimeoutException:
-        print("Objects not found, trying again...")
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
+            print("We are already on Page 2. Ending Page_1 Function.")
+            return enrollment_id
+        except:
+            print("Objects not found, trying again...")
+            page_1(person)
         try:
             WebDriverWait(driver, 3).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[2]/button[1]/span[1]")))
             print("We are on Page 2...")
-            return 0
+            return enrollment_id
         except:
             pass
         page_1(person)
@@ -194,13 +261,15 @@ def page_1(person):
     # Check if next page is appeared
     try:
         time.sleep(5)
-        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "mat-input-2"))).click()
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[1]/mat-form-field/div[1]/div/div[2]/input"))).click()
         print("Still on Page 1... Calling Page#1 Again...")
         page_1(person)
     except:
         pass
     print("End of PAGE_1 Fucntion...")
     print("="*70)
+    return enrollment_id
 
 # --------------------------------- Remove Adress Validation -------------------------------------
 def validate_address():
@@ -211,19 +280,21 @@ def validate_address():
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/div/div[2]/mat-slide-toggle/div/button")))
             validate_adrs.click()
             print("Validate Button clicked...")
+            try:
+                yes_btn = WebDriverWait(driver, 13).until(EC.presence_of_element_located((
+                By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button[2]")))
+                yes_btn.click()
+                print("Warning dismissed...")
+                time.sleep(2)
+            except:
+                print("Validate address confirmation not appeared, trying again...")
+                return True
         except:
             print("Validate address button not found")
             # To repeat the check
             return True
         time.sleep(3)
-        try:
-            yes_btn = WebDriverWait(driver, 13).until(EC.presence_of_element_located((
-            By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button[2]")))
-            yes_btn.click()
-            print("Warning dismissed...")
-        except:
-            print("Validate address confirmation not appeared, trying again...")
-            return True
+        
         
         print("END of VALIDATE_ADDRESS Fucntion...")
         print("="*70)
@@ -234,8 +305,10 @@ def page_2():
     print("Start of Page # 2 Fucntion...")
     print("="*70)
     try:
-        medicaid = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-radio-6-input")))
-        income_based = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input")))
+        medicaid = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[1]")))
+        income_based = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
         
         
         # If income based...
@@ -245,7 +318,7 @@ def page_2():
             income_based.click()
             time.sleep(1)
 
-            people_in_house = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-input-12")))
+            people_in_house = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-input-12")))
             people = str(random.randint(2, 5))
             print(f"Entere {people} people in house hold.")
             people_in_house.send_keys("")
@@ -258,18 +331,18 @@ def page_2():
         #     medicaid.click()
         #     time.sleep(1)
 
-        #     eligible_program = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-select-2")))
+        #     eligible_program = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-select-2")))
         #     time.sleep(1)
         #     eligible_program.click()
         #     time.sleep(1)
 
-        #     medicaid_drop_down = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-option-4")))
+        #     medicaid_drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-option-4")))
         #     medicaid_drop_down.click()
         #     print("Medicaid Selected from Drop Down...")
 
         try:
             print("Submitting...")
-            submit_btn = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+            submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[2]/button[2]")))
             time.sleep(1)
             submit_btn.click()            
@@ -283,7 +356,7 @@ def page_2():
     # Check if next page appeared
     try:
         time.sleep(5)
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
         print("Still on page 2, calling PAGE_2 again.")
         page_2()
     except:
@@ -296,12 +369,12 @@ def consent_form():
     print("Start of CONSENT_FORM Fucntion...")
     print("="*70)
     try:
-        submit_btn = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
         By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card/mat-card-content/button")))
         time.sleep(1)
         submit_btn.click()
         time.sleep(2)
-    except TimeoutError:
+    except TimeoutException:
         print("Form not appeared, trying again.")
         consent_form()
     print("End of CONSENT_FORM Fucntion...")
@@ -313,27 +386,30 @@ def consent_popup():
     print("="*70)
     try:
         print("Get Consent Form element.")
-        consent_pop = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
+        consent_pop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[1]")))
         try:
             print("Checking if consent form isDisplayed.")
             if consent_pop.is_displayed():
                 print("Yes it is.")
-                consent_check_1 = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                consent_check_1 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[1]/mat-checkbox")))
-                consent_check_2 = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                consent_check_2 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[7]/div[1]/mat-checkbox")))
-                consent_check_3 = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                consent_check_3 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[7]/div[2]/mat-checkbox")))
-                consent_check_4 = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                consent_check_4 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[7]/div[3]")))
-                consent_check_5 = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                consent_check_5 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[7]/div[4]/mat-checkbox")))
                 print("Got all checkBoxes")
                 
-                submit_btn = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[3]/button[2]")))
                 print("Got Submit Btn")
+                
+                time.sleep(1)
+                submit_btn.click()
                 
                 time.sleep(1)
                 if not consent_check_1.is_selected():
@@ -353,7 +429,8 @@ def consent_popup():
                 time.sleep(1)
                 if not consent_check_5.is_selected():
                     consent_check_5.click()
-                time.sleep(1)
+                
+                time.sleep(4)
                 submit_btn.click()
                 print("Submitted.")
             else:
@@ -363,12 +440,12 @@ def consent_popup():
         except Exception as e:
             print(f"Error: {e}")
             consent_popup()
-    except TimeoutError:
+    except TimeoutException:
         print("Form not appeared, trying again.")
         consent_popup()
     # Check if still on Consent PopUp Page
     try:
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[1]/mat-checkbox")))
         print("Consent Popup still appeared, Calling CONSENT_POPUP again")
         consent_popup()
@@ -378,64 +455,66 @@ def consent_popup():
     print("="*70)
 
 # --------------------------------- Digital Sign Page -------------------------------------
-def digital_sign(person):
+def digital_sign():
     print("Start of DIGITAL_SIGN Fucntion...")
     print("="*70)
     try:
-        time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.ID,"mat-select-4")))
         time.sleep(1)
         time_zone_drop.click()
         print("Drop Down Clicked.")
         
-        utc_zone = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        utc_zone = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[1]")))
-        atlantic = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        atlantic = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[2]")))
-        eastern = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        eastern = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[3]")))
-        indiana = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        indiana = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[4]")))
-        central = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        central = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[5]")))
-        mountain = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        mountain = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[6]")))
-        arizona = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        arizona = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[7]")))
-        pacific = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        pacific = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[8]")))
-        alaska = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        alaska = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[9]")))
-        hawai = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        hawai = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[10]")))
-        midway = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        midway = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[11]")))
-        port_mor = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        port_mor = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[12]")))
-        samoa = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        samoa = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[13]")))
     except Exception as e:
         print(f"Error:    {e}...")
         digital_sign()
     
-    print("Selecting a time zone.")
+    print("Selecting Eastern Time Zone.")
+    eastern.click()
+    # print("Selecting a time zone.")
     # If eastern daylight
 
-    timezone = person["timezone"]
-    print(f"Our Time zone is {timezone}")
-    if timezone == "eastern":
-        print("Selecting Eastern Time Zone.")
-        eastern.click()
-    else:
-        print("Not eastern.")
-        eastern.click()
+    # timezone = person["timezone"]
+    # print(f"Our Time zone is {timezone}")
+    # if timezone == "eastern":
+        # print("Selecting Eastern Time Zone.")
+    #     eastern.click()
+    # else:
+    #     print("Not eastern.")
+        # eastern.click()
 
     
     # After time zone:
     try:
-        check_box = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        check_box = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
-        submit_btn = time_zone_drop = WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+        submit_btn = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[3]/div[3]/button")))
         time.sleep(1)
         check_box.click()
@@ -443,49 +522,64 @@ def digital_sign(person):
         time.sleep(1)
         submit_btn.click()
         print("Submitted.")
-    except TimeoutError:
+    except TimeoutException:
         print("Digitial Sign Check Box Not found... trying again...")
-        digital_sign(person)
+        digital_sign()
     
     print("End of DIGITAL_SIGN Fucntion...")
     print("="*70)
 
 # --------------------------------- Store Final Message -------------------------------------
 def post_popup():
+    message = """Error
+Transferring ACP benefit failed. You can update your information and try again.
+Ok"""
     print("Start of FINAL_MESSAGE Fucntion...")
     print("="*70)
     try:
-        popup = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
+        popup = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container")))
         print("PopUp appeared.")
         time.sleep(5)
         print("Checking if Service Transfer Exception")
-        service_transfer_exception()
-        time.sleep(5)
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[2]/div/div/mat-radio-group/mat-radio-button[1]")))
+            service_transfer_exception()
+        except TimeoutException:
+            print("Transfer Service Not Appeared...")
+        time.sleep(10)
         print("Checking if Error Message")
-        error_message()
-        
-    except TimeoutError:
-        print("No PopUp Appeared.")
-        final_text = "No PopUp Appeared. Hope its Fine."
+        try:
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button")))
+            print("Got error....")
+            message = error_message()
+        except TimeoutException:
+            print("No error appeared...")
+    except TimeoutException:
+        print("No PopUp Appeared.")  
+
     print("End of FINAL_MESSAGE Fucntion...")
     print("="*70)
+    return message
 
 # --------------------------------- Check if error occured -------------------------------------
 def service_transfer_exception():
     print("Start of SERVICE_TRANSFER Fucntion...")
     print("="*70)
     try:
-        transfer_without = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
+        transfer_without = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[2]/div/div/mat-radio-group/mat-radio-button[1]")))
-        stopped_operating = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
-                By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[2]/div/div/mat-radio-group/mat-radio-button[2]")))
-        moved_to_loc = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
-                By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[2]/div/div/mat-radio-group/mat-radio-button[3]")))
         print("Service Transfer options found.")
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[3]/button[2]")))
+        time.sleep(1)
         transfer_without.click()
-    except TimeoutError:
-        pass
+        time.sleep(2)
+        submit_btn.click()
+    except TimeoutException:
+        print("Transfer Service Not Appeared...")
     print("End of SERVICE_TRANSFER Fucntion...")
     print("="*70)
 
@@ -495,22 +589,62 @@ def error_message():
     print("="*70)
     global final_text
     try:
-        ok_btn = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
+        ok_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button")))
-        time.sleep(1)
-        ok_btn.click()
         print("Got error, stored....")
-        final_text = WebDriverWait(driver, 25).until(EC.presence_of_element_located((
+        final_text = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container"))).text
         print("="*60)
         print(final_text)
         print("="* 60)
+        time.sleep(1)
+        ok_btn.click()
         return final_text 
-    except TimeoutError:
-        pass
+    except TimeoutException:
+        print("No error appeared...")
+        final_text = "No PopUp Appeared. Hope its Fine."
+
     print("Start of ERROR_MESSAGE Fucntion...")
     print("="*70)
-    
+
+# --------------------------------- Driver function for program -------------------------------------
+def device_type_page():
+    print("Start of DEVICE_TYPE_PAGE Fucntion...")
+    print("="*70)
+    try:
+        time.sleep(10)
+        drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-plan/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-form-field/div[1]/div/div[2]/mat-select")))
+        time.sleep(1)
+        drop_down.click()
+        time.sleep(1)
+        sim =  WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[1]")))
+        sim.click()
+        time.sleep(1)
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-plan/div/div[2]/div[2]/button[2]")))
+        submit_btn.click()
+    except TimeoutException:
+        print("Device Type elements not found. Try again.")
+        try:
+            check_box = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
+            print("Still on Consent Page. It means we are not having Deivce Type.")
+        except TimeoutException:
+            print("Not on Consent Page, look for Device Options again.")
+            device_type_page()
+    print("Start of DEVICE_TYPE_PAGE Fucntion...")
+    print("="*70)
+
+
+def success_page():
+    try:
+        enroll_id =  WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-thanks/div/div/p[1]"))).text
+        return enroll_id
+    except TimeoutException:
+        print("Enrollment ID not found. Try again...")
 
 # --------------------------------- Driver function for program -------------------------------------
 def driver():
@@ -522,11 +656,22 @@ def driver():
 try:
     driver()
 except Exception as e:
-    print(e)
+    print("==="*30)
+    print("==="*30)
+    print("ENDING.... EXCEPTION...")
+    print("==="*30)
+    print("==="*30)
+    print(f"Exception occured: {e}")
+    traceback.print_exc()
 else:
     pass
 finally:
-    time.sleep(100)
+    print("==="*30)
+    print("==="*30)
+    print("ENDING.... FINALLY...")
+    print("==="*30)
+    print("==="*30)
     driver.quit()
-    print("Creating output file.")
     df.to_csv("completed_records_with_results.csv", index=False)
+    print("Created output file.")
+    time.sleep(100)
