@@ -14,6 +14,8 @@ final_text = ""
 driver = ""
 df = ""
 line_break = "=" * 60
+enroll_id = ""
+error_appeared = False
 def get_data_from_csv():
     global df
     df = pd.read_csv("filtered.csv", )
@@ -33,7 +35,7 @@ def init():
 def start():
     global df
     coming_message = """Error
-Transferring ACP benefit failed. You can update your information and try again.
+N/A
 Ok"""
     for index, person in df.iterrows():
     # Process one row at a time
@@ -42,30 +44,67 @@ Ok"""
         open_page()
         login(person)
         coming_enrollment_id = page_1(person)
-        print(coming_enrollment_id)
-        page_2()
-        consent_form()
-        consent_popup()
-        digital_sign()
-        coming_message = post_popup()
-        print(f"Message from pop_up: {coming_message}")
-        device_type_page()
-        success_page()
+        if coming_enrollment_id == False:
+            print("Error Appeared in Details Page...")
+            coming_message = error_message()
+            print(f"Message from pop_up: {coming_message}")
+            print("=="*60)
+            print("=="*60)
+            message = coming_message.split("\n")[1]
+            print(f"Message from pop_up: {message}")
+            enrollment_id = enroll_id.split(": ")[-1]
+            print(f"EnrollmentID: {enrollment_id}")
+            print("=="*60)
+            print("=="*60)
+            # Write to new Column
+            print("=="*50)
+            df.loc[index, 'result_message'] = message
+            print(df.loc[index, 'result_message'])
+            df.loc[index, 'enrollment_id'] = enrollment_id
+            print(df.loc[index, 'enrollment_id'])
+            continue
+        else:
+            print(coming_enrollment_id)
+            page_2()
+            consent_form()
+            consent_popup()
+            digital_sign()
+            coming_message = post_popup()
+            print(f"Message from pop_up: {coming_message}")
+            if error_appeared:
+                print("=="*60)
+                print("=="*60)
+                message = coming_message.split("\n")[1]
+                print(f"Message from pop_up: {message}")
+                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                print(f"EnrollmentID: {enrollment_id}")
+                print("=="*60)
+                print("=="*60)
+                # Write to new Column
+                print("=="*50)
+                df.loc[index, 'result_message'] = message
+                print(df.loc[index, 'result_message'])
+                df.loc[index, 'enrollment_id'] = enrollment_id
+                print(df.loc[index, 'enrollment_id'])
+                continue
+            else:
+                device_type_page()
+                success_page()
 
-        print("=="*60)
-        print("=="*60)
-        message = coming_message.split("\n")[1]
-        print(f"Message from pop_up: {message}")
-        enrollment_id = coming_enrollment_id.split(": ")[-1]
-        print(f"EnrollmentID: {enrollment_id}")
-        print("=="*60)
-        print("=="*60)
-        # Write to new Column
-        print("=="*50)
-        df.loc[index, 'result_message'] = message
-        print(df.loc[index, 'result_message'])
-        df.loc[index, 'enrollment_id'] = enrollment_id
-        print(df.loc[index, 'enrollment_id'])
+            print("=="*60)
+            print("=="*60)
+            message = coming_message.split("\n")[1]
+            print(f"Message from pop_up: {message}")
+            enrollment_id = coming_enrollment_id.split(": ")[-1]
+            print(f"EnrollmentID: {enrollment_id}")
+            print("=="*60)
+            print("=="*60)
+            # Write to new Column
+            print("=="*50)
+            df.loc[index, 'result_message'] = message
+            print(df.loc[index, 'result_message'])
+            df.loc[index, 'enrollment_id'] = enrollment_id
+            print(df.loc[index, 'enrollment_id'])
     # Save the csv at the FINALLY BLOCK
 
 # --------------------------------- Open WebPage -------------------------------------
@@ -106,19 +145,15 @@ def login(person):
         email_addrs = person["email"]
         email_field.send_keys("")
         email_field.send_keys(email_addrs)
-        time.sleep(9)
+        time.sleep(3)
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
         # Check if plans are clickable.
-        try:
-            print("Checking if Radio Button is clickable.")
-            priority_plan = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((
-            By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-radio-group/mat-radio-button[2]/div/div/input")))
-            time.sleep(1)
-            priority_plan.click()
-        except TimeoutException:
-            print("Priority Plan Cannot be selected, continue with default.")
-        
+        driver.execute_script("""
+document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
+""")
+        print("Clicked on 2nd button if possible.")
+        time.sleep(2)
         submit_btn.click()
     except TimeoutException:
         try:
@@ -132,7 +167,7 @@ def login(person):
     
     # Check if next page appeared
     try:
-        time.sleep(2)
+        time.sleep(5)
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[2]/div[1]/div/div[2]/input"))).send_keys("test")
         print("Calling Login Again, still on start page.")
@@ -147,6 +182,7 @@ def login(person):
 def page_1(person):
     print("Start of PAGE # 1 Fucntion...")
     print("="*70)
+    global enroll_id
     enrollment_id = "Your Enrollment ID: N/A"
     try:
         first_name = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
@@ -161,13 +197,11 @@ def page_1(person):
         
         address_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
-        
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[4]/button")))
-        
         enrollment_id = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/div/span"))).text
-        
+        enroll_id = enrollment_id
 
         first = person["first"]
         first_name.send_keys("")
@@ -192,6 +226,7 @@ def page_1(person):
         address = person["address"]
         address_element.send_keys("")
         address_element.send_keys(address)
+
         time.sleep(1)
         print("Entered Address.")
         time.sleep(1)
@@ -215,13 +250,26 @@ def page_1(person):
         print("clicked submit")
         time.sleep(3)
         
+        # Check for Error
+        try:
+            print("Checking for Duplicate Erro/r")
+            popup = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                    By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container")))
+            print("PopUp appeared.")
+            return False
+        except TimeoutException:
+            print("No Duplicate Error Appeared.")  
+
+        # Check  Address Validaton
         try:
             print("Checking if adrs bar is there.")
             WebDriverWait(driver, 3).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
             valid = validate_address()
             if not valid:
-                time.sleep(4)
+                time.sleep(5)
+                submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[4]/button")))
                 submit_btn.click()
                 print("Submitted...")
         except TimeoutException:
@@ -493,6 +541,7 @@ def digital_sign():
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[13]")))
     except Exception as e:
         print(f"Error:    {e}...")
+        traceback.print_exc()
         digital_sign()
     
     print("Selecting Eastern Time Zone.")
@@ -512,7 +561,7 @@ def digital_sign():
     
     # After time zone:
     try:
-        check_box = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+        check_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
         submit_btn = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[3]/div[3]/button")))
@@ -532,7 +581,7 @@ def digital_sign():
 # --------------------------------- Store Final Message -------------------------------------
 def post_popup():
     message = """Error
-Transferring ACP benefit failed. You can update your information and try again.
+N/A
 Ok"""
     print("Start of FINAL_MESSAGE Fucntion...")
     print("="*70)
@@ -553,12 +602,21 @@ Ok"""
         try:
             WebDriverWait(driver, 15).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button")))
-            print("Got error....")
+            print("Got an error....")
             message = error_message()
         except TimeoutException:
             print("No error appeared...")
     except TimeoutException:
         print("No PopUp Appeared.")  
+    
+    try:
+        print("Trying to submit.")
+        submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[3]/div[3]/button")))
+        time.sleep(1)
+        submit_btn.click()
+    except Exception as e:
+        print(f"Submit Button can't be clicked, Error: {e}")
 
     print("End of FINAL_MESSAGE Fucntion...")
     print("="*70)
@@ -588,10 +646,12 @@ def error_message():
     print("Start of ERROR_MESSAGE Fucntion...")
     print("="*70)
     global final_text
+    global error_appeared
+    error_appeared = False
     try:
         ok_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button")))
-        print("Got error, stored....")
+        print("Error is stored....")
         final_text = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container"))).text
         print("="*60)
@@ -599,7 +659,8 @@ def error_message():
         print("="* 60)
         time.sleep(1)
         ok_btn.click()
-        return final_text 
+        error_appeared = True
+        return final_text
     except TimeoutException:
         print("No error appeared...")
         final_text = "No PopUp Appeared. Hope its Fine."
