@@ -13,12 +13,14 @@ from selenium.webdriver.support import expected_conditions as EC
 final_text = ""
 driver = ""
 df = ""
+remaining_df = ""
 line_break = "=" * 60
 enroll_id = ""
 error_appeared = False
 def get_data_from_csv():
-    global df
+    global df, remaining_df
     df = pd.read_csv("filtered.csv", )
+    remaining_df = df.copy()
     print(df.head())
 
 # --------------------------------- Initialize -------------------------------------
@@ -62,6 +64,7 @@ Ok"""
             print(df.loc[index, 'result_message'])
             df.loc[index, 'enrollment_id'] = enrollment_id
             print(df.loc[index, 'enrollment_id'])
+            remaining_df.drop(index, inplace=True)
             continue
         else:
             print(coming_enrollment_id)
@@ -86,6 +89,7 @@ Ok"""
                 print(df.loc[index, 'result_message'])
                 df.loc[index, 'enrollment_id'] = enrollment_id
                 print(df.loc[index, 'enrollment_id'])
+                remaining_df.drop(index, inplace=True)
                 continue
             else:
                 device_type_page()
@@ -105,6 +109,7 @@ Ok"""
             print(df.loc[index, 'result_message'])
             df.loc[index, 'enrollment_id'] = enrollment_id
             print(df.loc[index, 'enrollment_id'])
+            remaining_df.drop(index, inplace=True)
     # Save the csv at the FINALLY BLOCK
 
 # --------------------------------- Open WebPage -------------------------------------
@@ -154,6 +159,10 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
 """)
         print("Clicked on 2nd button if possible.")
         time.sleep(2)
+        submit_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
+        # if submit_btn.is_enabled():
+        #     time.sleep(2)
         submit_btn.click()
     except TimeoutException:
         try:
@@ -734,5 +743,7 @@ finally:
     print("==="*30)
     driver.quit()
     df.to_csv("completed_records_with_results.csv", index=False)
+    remaining_df.to_csv("filtered_remain.csv")
+    print("Created Remaining File..")
     print("Created output file.")
     time.sleep(100)
