@@ -31,6 +31,7 @@ def init():
 # --------------------------------- Starts from Here -------------------------------------
 def start():
     global df
+    global error_appeared 
     coming_message = """Error
 N/A
 Ok"""
@@ -51,6 +52,14 @@ Ok"""
             coming_message = error_message()
             message = coming_message.split("\n")[1]
             enrollment_id = enroll_id.split(": ")[-1]
+            print("Closing this loop, finalizing")
+            df.loc[index, 'result_message'] = message
+            print(df.loc[index, 'result_message'])
+            df.loc[index, 'enrollment_id'] = enrollment_id
+            print(df.loc[index, 'enrollment_id'])
+            print("=="*50)
+            print("=="*50)
+            remaining_df.drop(index, inplace=True)
             continue
         else:
             page_2()
@@ -59,23 +68,35 @@ Ok"""
             digital_sign()
             coming_message = post_popup()
             if error_appeared:
+                print("Error Appeared on Consent Page after submitting Digital Sign")
+                error_appeared = False
                 message = coming_message.split("\n")[1]
                 enrollment_id = coming_enrollment_id.split(": ")[-1]
+                print("Closing this loop, finalizing")
+                df.loc[index, 'result_message'] = message
+                print(df.loc[index, 'result_message'])
+                df.loc[index, 'enrollment_id'] = enrollment_id
+                print(df.loc[index, 'enrollment_id'])
+                print("=="*50)
+                print("=="*50)
+                remaining_df.drop(index, inplace=True)
                 continue
             else:
+                print("Going to Device Page.")
                 device_type_page()
                 success_page()
                 message = coming_message.split("\n")[1]
                 enrollment_id = coming_enrollment_id.split(": ")[-1]
-                
-        # Write to new Column
-        df.loc[index, 'result_message'] = message
-        print(df.loc[index, 'result_message'])
-        df.loc[index, 'enrollment_id'] = enrollment_id
-        print(df.loc[index, 'enrollment_id'])
-        print("=="*50)
-        print("=="*50)
-        remaining_df.drop(index, inplace=True)
+                # Write to new Column
+                print("Closing this loop, finalizing")
+                df.loc[index, 'result_message'] = message
+                print(df.loc[index, 'result_message'])
+                df.loc[index, 'enrollment_id'] = enrollment_id
+                print(df.loc[index, 'enrollment_id'])
+                print("=="*50)
+                print("=="*50)
+                remaining_df.drop(index, inplace=True)        
+        
     # Save the csv at the FINALLY BLOCK
 
 # --------------------------------- Open WebPage -------------------------------------
