@@ -25,14 +25,9 @@ def get_data_from_csv():
 
 # --------------------------------- Initialize -------------------------------------
 def init():
-    print("Start of INIT Fucntion...")
-    print(line_break)
     global driver
     driver = uc.Chrome()
     driver.maximize_window()
-    print("End of INIT Fucntion...")
-    print(line_break)
-
 # --------------------------------- Starts from Here -------------------------------------
 def start():
     global df
@@ -41,82 +36,50 @@ N/A
 Ok"""
     for index, person in df.iterrows():
     # Process one row at a time
-        print(f"Processing {index+1}th Record")
+        print(f"========== Processing {index+1}th Record ==========")
+        print(line_break)
+        print("=="*50)
+        print("=="*50)
         print(person)
+        print("=="*50)
+        print("=="*50)
         open_page()
         login(person)
         coming_enrollment_id = page_1(person)
         if coming_enrollment_id == False:
             print("Error Appeared in Details Page...")
             coming_message = error_message()
-            print(f"Message from pop_up: {coming_message}")
-            print("=="*60)
-            print("=="*60)
             message = coming_message.split("\n")[1]
-            print(f"Message from pop_up: {message}")
             enrollment_id = enroll_id.split(": ")[-1]
-            print(f"EnrollmentID: {enrollment_id}")
-            print("=="*60)
-            print("=="*60)
-            # Write to new Column
-            print("=="*50)
-            df.loc[index, 'result_message'] = message
-            print(df.loc[index, 'result_message'])
-            df.loc[index, 'enrollment_id'] = enrollment_id
-            print(df.loc[index, 'enrollment_id'])
-            remaining_df.drop(index, inplace=True)
             continue
         else:
-            print(coming_enrollment_id)
             page_2()
             consent_form()
             consent_popup()
             digital_sign()
             coming_message = post_popup()
-            print(f"Message from pop_up: {coming_message}")
             if error_appeared:
-                print("=="*60)
-                print("=="*60)
                 message = coming_message.split("\n")[1]
-                print(f"Message from pop_up: {message}")
                 enrollment_id = coming_enrollment_id.split(": ")[-1]
-                print(f"EnrollmentID: {enrollment_id}")
-                print("=="*60)
-                print("=="*60)
-                # Write to new Column
-                print("=="*50)
-                df.loc[index, 'result_message'] = message
-                print(df.loc[index, 'result_message'])
-                df.loc[index, 'enrollment_id'] = enrollment_id
-                print(df.loc[index, 'enrollment_id'])
-                remaining_df.drop(index, inplace=True)
                 continue
             else:
                 device_type_page()
                 success_page()
-
-            print("=="*60)
-            print("=="*60)
-            message = coming_message.split("\n")[1]
-            print(f"Message from pop_up: {message}")
-            enrollment_id = coming_enrollment_id.split(": ")[-1]
-            print(f"EnrollmentID: {enrollment_id}")
-            print("=="*60)
-            print("=="*60)
-            # Write to new Column
-            print("=="*50)
-            df.loc[index, 'result_message'] = message
-            print(df.loc[index, 'result_message'])
-            df.loc[index, 'enrollment_id'] = enrollment_id
-            print(df.loc[index, 'enrollment_id'])
-            remaining_df.drop(index, inplace=True)
+                message = coming_message.split("\n")[1]
+                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                
+        # Write to new Column
+        df.loc[index, 'result_message'] = message
+        print(df.loc[index, 'result_message'])
+        df.loc[index, 'enrollment_id'] = enrollment_id
+        print(df.loc[index, 'enrollment_id'])
+        print("=="*50)
+        print("=="*50)
+        remaining_df.drop(index, inplace=True)
     # Save the csv at the FINALLY BLOCK
 
 # --------------------------------- Open WebPage -------------------------------------
 def open_page():
-    print("Start of OPEN_PAGE Fucntion...")
-    print("="*70)
-
     driver.execute_script("window.open('about:blank', '_blank');")
     
     driver.switch_to.window(driver.window_handles[-1])
@@ -124,6 +87,7 @@ def open_page():
     search_url = f"https://maxsip.legendari.tech/enroll/mhaider1/start"
     driver.get(search_url)
     print("Opened WebPage in new tab...")
+    print("="*70)
     
     # Close all other tabs except the new one
     for handle in driver.window_handles[:-1]:
@@ -132,7 +96,7 @@ def open_page():
     
     # Switch back to the new tab
     driver.switch_to.window(driver.window_handles[-1])
-    print("="*70)
+    
 
 # --------------------------------- Login -------------------------------------
 def login(person):
@@ -166,18 +130,18 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
         submit_btn.click()
     except TimeoutException:
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[1]/mat-form-field/div[1]/div/div[2]/input")))
             print("We are already on Page 1. Ending Login Here...")
             return 0
         except:
-            print("Fields not there... Trying again.")
+            print("Login Fields not there... Trying again.")
             login(person)
     
     # Check if next page appeared
     try:
-        time.sleep(5)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+        time.sleep(3)
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[2]/div[1]/div/div[2]/input"))).send_keys("test")
         print("Calling Login Again, still on start page.")
         email_field.clear()
@@ -235,72 +199,65 @@ def page_1(person):
         address = person["address"]
         address_element.send_keys("")
         address_element.send_keys(address)
-
-        time.sleep(1)
         print("Entered Address.")
-        time.sleep(1)
 
         dob_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[2]/div[1]/mat-form-field/div[1]/div/div[2]/input")))
         dob_field_id = dob_field.get_attribute("id")
         driver.execute_script(f"""
-
             var dobField = document.getElementById("{dob_field_id}");
             dobField.readOnly = false;
             console.log("DOB now accepts Input..");
 """)
-        time.sleep(2)
+        time.sleep(1)
         dob = person.dob
         dob_field.send_keys(dob)
         print("DOB entered.")
 
-        time.sleep(2)
+        time.sleep(1)
         submit_btn.click()
         print("clicked submit")
-        time.sleep(3)
+        time.sleep(1)
         
         # Check for Error
         try:
-            print("Checking for Duplicate Erro/r")
-            popup = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            print("Checking for Duplicate Error")
+            popup = WebDriverWait(driver, 5).until(EC.presence_of_element_located((
                     By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container")))
             print("PopUp appeared.")
             return False
         except TimeoutException:
-            print("No Duplicate Error Appeared.")  
+            print("Duplicate Error Not Found.")  
 
-        # Check  Address Validaton
+        # Check Address Validaton
         try:
             print("Checking if adrs bar is there.")
-            WebDriverWait(driver, 3).until(EC.presence_of_element_located((
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
             valid = validate_address()
             if not valid:
-                time.sleep(5)
+                time.sleep(1)
                 submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[4]/button")))
                 submit_btn.click()
-                print("Submitted...")
         except TimeoutException:
             # print("Submitted...")
             print("Address perfectly validated.")
             valid = False
-        print("almost starting While Loop.")
         while valid:
             print("Inside the While Loop")
             try:
-                time.sleep(5)
-                WebDriverWait(driver, 3).until(EC.presence_of_element_located((
+                time.sleep(1)
+                WebDriverWait(driver, 4).until(EC.presence_of_element_located((
                     By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
-                print("Address not Validated... Clicking DON'T VALIDATE...")
+                print("Clicking DON'T VALIDATE...")
                 valid = validate_address()
             except:
-                print("Submitted...")
                 print("Address perfectly validated.")
                 valid = False
     except TimeoutException:
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
+            WebDriverWait(driver, 4).until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
             print("We are already on Page 2. Ending Page_1 Function.")
             return enrollment_id
         except:
@@ -317,8 +274,8 @@ def page_1(person):
     
     # Check if next page is appeared
     try:
-        time.sleep(5)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+        time.sleep(3)
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[2]/div/mat-card/mat-card-content/personal-info/div/div[1]/div[1]/mat-form-field/div[1]/div/div[2]/input"))).click()
         print("Still on Page 1... Calling Page#1 Again...")
         page_1(person)
@@ -337,21 +294,20 @@ def validate_address():
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/div/div[2]/mat-slide-toggle/div/button")))
             validate_adrs.click()
             print("Validate Button clicked...")
-            try:
-                yes_btn = WebDriverWait(driver, 13).until(EC.presence_of_element_located((
-                By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button[2]")))
-                yes_btn.click()
-                print("Warning dismissed...")
-                time.sleep(2)
-            except:
-                print("Validate address confirmation not appeared, trying again...")
-                return True
         except:
             print("Validate address button not found")
             # To repeat the check
             return True
-        time.sleep(3)
-        
+        time.sleep(2)
+        try:
+                yes_btn = WebDriverWait(driver, 7).until(EC.presence_of_element_located((
+                By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button[2]")))
+                yes_btn.click()
+                print("Warning dismissed...")
+                time.sleep(1)
+        except:
+            print("Validate address confirmation not appeared, trying again...")
+            return True
         
         print("END of VALIDATE_ADDRESS Fucntion...")
         print("="*70)
@@ -398,10 +354,8 @@ def page_2():
         #     print("Medicaid Selected from Drop Down...")
 
         try:
-            print("Submitting...")
             submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[2]/button[2]")))
-            time.sleep(1)
             submit_btn.click()            
             time.sleep(2)
             print("Submitted...")
@@ -412,8 +366,8 @@ def page_2():
         page_2()
     # Check if next page appeared
     try:
-        time.sleep(5)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
+        time.sleep(2)
+        WebDriverWait(driver, 7).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
         print("Still on page 2, calling PAGE_2 again.")
         page_2()
     except:
@@ -428,7 +382,6 @@ def consent_form():
     try:
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
         By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card/mat-card-content/button")))
-        time.sleep(1)
         submit_btn.click()
         time.sleep(2)
     except TimeoutException:
@@ -446,9 +399,7 @@ def consent_popup():
         consent_pop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[1]")))
         try:
-            print("Checking if consent form isDisplayed.")
             if consent_pop.is_displayed():
-                print("Yes it is.")
                 consent_check_1 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[1]/mat-checkbox")))
                 consent_check_2 = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
@@ -463,31 +414,24 @@ def consent_popup():
                 
                 submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[3]/button[2]")))
-                print("Got Submit Btn")
                 
-                time.sleep(1)
                 submit_btn.click()
                 
-                time.sleep(1)
+                time.sleep(2)
+                print("Checking boxes...")
+
                 if not consent_check_1.is_selected():
-                    print("1 Not selected already")
                     consent_check_1.click()
-                else:
-                    print("1 Already selected")
-                time.sleep(1)
                 if not consent_check_2.is_selected():
                     consent_check_2.click()
-                time.sleep(1)
                 if not consent_check_3.is_selected():
                     consent_check_3.click()
-                time.sleep(1)
                 if not consent_check_4.is_selected():
                     consent_check_4.click()
-                time.sleep(1)
                 if not consent_check_5.is_selected():
                     consent_check_5.click()
                 
-                time.sleep(4)
+                time.sleep(2)
                 submit_btn.click()
                 print("Submitted.")
             else:
@@ -574,7 +518,6 @@ def digital_sign():
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
         submit_btn = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[3]/div[3]/button")))
-        time.sleep(1)
         check_box.click()
         print("Checked Sign Box.")
         time.sleep(1)
@@ -597,21 +540,20 @@ Ok"""
     try:
         popup = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container")))
-        print("PopUp appeared.")
-        time.sleep(5)
+        print("A PopUp has appeared.")
+        time.sleep(2)
         print("Checking if Service Transfer Exception")
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[2]/div/div/mat-radio-group/mat-radio-button[1]")))
             service_transfer_exception()
         except TimeoutException:
-            print("Transfer Service Not Appeared...")
-        time.sleep(10)
+            print("Transfer Service Not Found...")
+        time.sleep(2)
         print("Checking if Error Message")
         try:
-            WebDriverWait(driver, 15).until(EC.presence_of_element_located((
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/div[2]/button")))
-            print("Got an error....")
             message = error_message()
         except TimeoutException:
             print("No error appeared...")
@@ -641,9 +583,8 @@ def service_transfer_exception():
         print("Service Transfer options found.")
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/transfer-exception/div[3]/button[2]")))
-        time.sleep(1)
         transfer_without.click()
-        time.sleep(2)
+        time.sleep(1)
         submit_btn.click()
     except TimeoutException:
         print("Transfer Service Not Appeared...")
@@ -682,10 +623,9 @@ def device_type_page():
     print("Start of DEVICE_TYPE_PAGE Fucntion...")
     print("="*70)
     try:
-        time.sleep(10)
+        time.sleep(1)
         drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-plan/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-form-field/div[1]/div/div[2]/mat-select")))
-        time.sleep(1)
         drop_down.click()
         time.sleep(1)
         sim =  WebDriverWait(driver, 10).until(EC.presence_of_element_located((
@@ -696,9 +636,9 @@ def device_type_page():
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-plan/div/div[2]/div[2]/button[2]")))
         submit_btn.click()
     except TimeoutException:
-        print("Device Type elements not found. Try again.")
+        print("Device Type elements not found.")
         try:
-            check_box = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            check_box = time_zone_drop = WebDriverWait(driver, 4).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
             print("Still on Consent Page. It means we are not having Deivce Type.")
         except TimeoutException:
@@ -743,7 +683,8 @@ finally:
     print("==="*30)
     driver.quit()
     df.to_csv("completed_records_with_results.csv", index=False)
-    remaining_df.to_csv("filtered_remain.csv")
+    remaining_df.to_csv("filtered_remain.csv", index=False)
     print("Created Remaining File..")
     print("Created output file.")
+    print("100 Seconds wait...")
     time.sleep(100)
