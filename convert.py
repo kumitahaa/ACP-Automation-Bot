@@ -1,7 +1,14 @@
 import pandas as pd
 
-person = pd.read_excel("person.xlsx", index_col=None)
+df = pd.read_csv("input.csv", index_col=None)
 
-print(person.head())
+for index, person in df.iterrows():
+    first = person["name"].strip().split(" ")[0]
+    last = person["name"].strip().split(" ")[-1]
+    df.loc[index, 'first'] = first
+    print(df.loc[index, 'first'])
+    df.loc[index, 'last'] = last
+    print(df.loc[index, 'last'])
 
-person.to_csv("person.csv")
+
+df.to_csv("output.csv", index=False)

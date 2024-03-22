@@ -16,6 +16,7 @@ df = ""
 remaining_df = ""
 line_break = "=" * 60
 enroll_id = ""
+coming_message = ""
 error_appeared = False
 def get_data_from_csv():
     global df, remaining_df
@@ -32,6 +33,7 @@ def init():
 def start():
     global df
     global error_appeared 
+    global coming_message
     coming_message = """Error
 N/A
 Ok"""
@@ -44,34 +46,69 @@ Ok"""
         print(person)
         print("=="*50)
         print("=="*50)
-        open_page()
-        login(person)
-        coming_enrollment_id = page_1(person)
-        if coming_enrollment_id == False:
-            print("Error Appeared in Details Page...")
-            coming_message = error_message()
-            message = coming_message.split("\n")[1]
-            enrollment_id = enroll_id.split(": ")[-1]
-            print("Closing this loop, finalizing")
-            df.loc[index, 'result_message'] = message
-            print(df.loc[index, 'result_message'])
-            df.loc[index, 'enrollment_id'] = enrollment_id
-            print(df.loc[index, 'enrollment_id'])
-            print("=="*50)
-            print("=="*50)
-            remaining_df.drop(index, inplace=True)
-            continue
-        else:
-            page_2()
-            consent_form()
-            consent_popup()
-            digital_sign()
-            coming_message = post_popup()
-            if error_appeared:
-                print("Error Appeared on Consent Page after submitting Digital Sign")
-                error_appeared = False
+        if "zip" in person and "ssn" in person and "phone" in person:
+            if len(str(int((person["zip"])))) == 5 and len(str(int((person["ssn"])))) == 4 and len(str(int((person["phone"])))) == 10:
+                print(person["dob"])
+                print(type(person["dob"]))
+                open_page()
+                login(person)
+                coming_enrollment_id = page_1(person)
+                if coming_enrollment_id == False:
+                    print("Error Appeared in Details Page...")
+                    coming_message = error_message()
+                    message = coming_message.split("\n")[1]
+                    enrollment_id = enroll_id.split(": ")[-1]
+                    print("Closing this loop, finalizing")
+                    df.loc[index, 'result_message'] = message
+                    print(df.loc[index, 'result_message'])
+                    df.loc[index, 'enrollment_id'] = enrollment_id
+                    print(df.loc[index, 'enrollment_id'])
+                    print("=="*50)
+                    print("=="*50)
+                    remaining_df.drop(index, inplace=True)
+                    continue
+                else:
+                    page_2()
+                    consent_form()
+                    consent_popup()
+                    digital_sign()
+                    coming_message = post_popup()
+                    if error_appeared:
+                        print("Error Appeared on Consent Page after submitting Digital Sign")
+                        error_appeared = False
+                        message = coming_message.split("\n")[1]
+                        enrollment_id = coming_enrollment_id.split(": ")[-1]
+                        print("Closing this loop, finalizing")
+                        df.loc[index, 'result_message'] = message
+                        print(df.loc[index, 'result_message'])
+                        df.loc[index, 'enrollment_id'] = enrollment_id
+                        print(df.loc[index, 'enrollment_id'])
+                        print("=="*50)
+                        print("=="*50)
+                        remaining_df.drop(index, inplace=True)
+                        continue
+                    else:
+                        print("Going to Device Page.")
+                        device_type_page()
+                        success_page()
+                        message = coming_message.split("\n")[1]
+                        enrollment_id = coming_enrollment_id.split(": ")[-1]
+                        # Write to new Column
+                        print("Closing this loop, finalizing")
+                        df.loc[index, 'result_message'] = message
+                        print(df.loc[index, 'result_message'])
+                        df.loc[index, 'enrollment_id'] = enrollment_id
+                        print(df.loc[index, 'enrollment_id'])
+                        print("=="*50)
+                        print("=="*50)
+                        remaining_df.drop(index, inplace=True)
+            else:
+                print("ZIP/SSN/Phone Data is not valid...")
+                coming_message = """Error
+    ZIP/SSN/Phone is NOT Valid.
+    Ok"""
                 message = coming_message.split("\n")[1]
-                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                enrollment_id = "None"
                 print("Closing this loop, finalizing")
                 df.loc[index, 'result_message'] = message
                 print(df.loc[index, 'result_message'])
@@ -80,22 +117,21 @@ Ok"""
                 print("=="*50)
                 print("=="*50)
                 remaining_df.drop(index, inplace=True)
-                continue
-            else:
-                print("Going to Device Page.")
-                device_type_page()
-                success_page()
-                message = coming_message.split("\n")[1]
-                enrollment_id = coming_enrollment_id.split(": ")[-1]
-                # Write to new Column
-                print("Closing this loop, finalizing")
-                df.loc[index, 'result_message'] = message
-                print(df.loc[index, 'result_message'])
-                df.loc[index, 'enrollment_id'] = enrollment_id
-                print(df.loc[index, 'enrollment_id'])
-                print("=="*50)
-                print("=="*50)
-                remaining_df.drop(index, inplace=True)        
+        else:
+            print("Missing zip, SSN, or phone number in person data")
+            coming_message = """Error
+    ZIP/SSN/Phone is NOT Present.
+    Ok"""
+            message = coming_message.split("\n")[1]
+            enrollment_id = "None"
+            print("Closing this loop, finalizing")
+            df.loc[index, 'result_message'] = message
+            print(df.loc[index, 'result_message'])
+            df.loc[index, 'enrollment_id'] = enrollment_id
+            print(df.loc[index, 'enrollment_id'])
+            print("=="*50)
+            print("=="*50)
+            remaining_df.drop(index, inplace=True)              
         
     # Save the csv at the FINALLY BLOCK
 
@@ -134,7 +170,7 @@ def login(person):
         zip_field.send_keys(zip_code)
         email_addrs = person["email"]
         email_field.send_keys("")
-        email_field.send_keys(email_addrs)
+        email_field.send_keys(email_addrs.replace(" ", ""))
         time.sleep(3)
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
@@ -670,9 +706,15 @@ def device_type_page():
 
 
 def success_page():
+    global coming_message
     try:
+        time.sleep(5)
         enroll_id =  WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-thanks/div/div/p[1]"))).text
+        print("Successful...")
+        coming_message = """Error
+Success
+Ok"""
         return enroll_id
     except TimeoutException:
         print("Enrollment ID not found. Try again...")
@@ -703,8 +745,8 @@ finally:
     print("==="*30)
     print("==="*30)
     driver.quit()
-    df.to_csv("completed_records_with_results.csv", index=False)
-    remaining_df.to_csv("filtered_remain.csv", index=False)
+    df.to_csv("output.csv", index=False)
+    remaining_df.to_csv("left_records.csv", index=False)
     print("Created Remaining File..")
     print("Created output file.")
     print("100 Seconds wait...")

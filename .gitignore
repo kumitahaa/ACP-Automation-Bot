@@ -1,9 +1,5 @@
-/org_data.xlsx
-/person.csv
-/person.xlsx
-/person_1.xlsx
-/~$org_data.xlsx
 /filtered.csv
-/filtered_1.csv
-/check_df.py
-/filtered_org.csv
+/testing_data
+/input.csv
+/ouput.csv
+/medicaid_data.xlsx
