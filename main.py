@@ -18,9 +18,15 @@ line_break = "=" * 60
 enroll_id = ""
 coming_message = ""
 error_appeared = False
+start_time = time.time()
+minute = 60
+timeout_message = "This is a timeout error of bot"
+
+
 def get_data_from_csv():
     global df, remaining_df
-    df = pd.read_csv("filtered.csv", )
+    df = pd.read_csv("input.csv", )
+    df.to_csv("prev_input.csv")
     remaining_df = df.copy()
     print(df.head())
 
@@ -34,10 +40,12 @@ def start():
     global df
     global error_appeared 
     global coming_message
+    global start_time
     coming_message = """Error
-N/A
+Something happened, No input, just started now...
 Ok"""
     for index, person in df.iterrows():
+        start_time = time.time()
     # Process one row at a time
         print(f"========== Processing {index+1}th Record ==========")
         print(line_break)
@@ -47,70 +55,145 @@ Ok"""
         print("=="*50)
         print("=="*50)
         if "zip" in person and "ssn" in person and "phone" in person:
-            if len(str(int((person["zip"])))) == 5 and len(str(int((person["ssn"])))) == 4 and len(str(int((person["phone"])))) == 10:
+            if len(str(((person["zip"])))) == 5 and len(str(((person["ssn"])))) == 4 and len(str(((person["phone"])))) == 10:
                 print(person["dob"])
                 print(type(person["dob"]))
                 open_page()
                 login(person)
-                coming_enrollment_id = page_1(person)
-                if coming_enrollment_id == False:
-                    print("Error Appeared in Details Page...")
-                    coming_message = error_message()
-                    message = coming_message.split("\n")[1]
-                    enrollment_id = enroll_id.split(": ")[-1]
+                if enough_time(start_time):
+                    coming_enrollment_id = page_1(person)
+                    # Contains False even if time limit is exceeded...
+                    if coming_enrollment_id == False:
+                        print("Error in Details Page...")
+                        coming_message = error_message()
+                        if enough_time(start_time):
+                            print("TimeOut....")
+                            enrollment_id = enroll_id.split(": ")[-1]
+                            print("Closing this loop, finalizing")
+                            df.loc[index, 'result_message'] = timeout_message
+                            print(df.loc[index, 'result_message']) 
+                            df.loc[index, 'enrollment_id'] = enrollment_id
+                            print(df.loc[index, 'enrollment_id'])
+                            print("=="*50)
+                            print("=="*50)
+                            remaining_df.drop(index, inplace=True)
+                            continue
+                    else:
+                        page_2(person)
+                        if enough_time(start_time):
+                            consent_form()
+                            if enough_time(start_time):
+                                consent_popup()
+                                if enough_time(start_time):
+                                    digital_sign()
+                                    if enough_time(start_time):
+                                        coming_message = post_popup()
+                                        if error_appeared:
+                                            print("Error Appeared on Consent Page after submitting Digital Sign")
+                                            error_appeared = False
+                                            message = coming_message.split("\n")[1]
+                                            enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                            print("Closing this loop, finalizing")
+                                            df.loc[index, 'result_message'] = message
+                                            print(df.loc[index, 'result_message'])
+                                            df.loc[index, 'enrollment_id'] = enrollment_id
+                                            print(df.loc[index, 'enrollment_id'])
+                                            print("=="*50)
+                                            print("=="*50)
+                                            remaining_df.drop(index, inplace=True)
+                                            continue
+                                        else:
+                                            print("Going to Device Page.")
+                                            if enough_time(start_time):
+                                                device_type_page()
+                                                success_page()
+                                                message = coming_message.split("\n")[1]
+                                                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                                # Write to new Column
+                                                print("Closing this loop, finalizing")
+                                                df.loc[index, 'result_message'] = message
+                                                print(df.loc[index, 'result_message'])
+                                                df.loc[index, 'enrollment_id'] = enrollment_id
+                                                print(df.loc[index, 'enrollment_id'])
+                                                print("=="*50)
+                                                print("=="*50)
+                                                remaining_df.drop(index, inplace=True)
+                                            else:
+                                                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                                # Write to new Column
+                                                print("Closing this loop, finalizing")
+                                                df.loc[index, 'result_message'] = timeout_message
+                                                print(df.loc[index, 'result_message'])
+                                                df.loc[index, 'enrollment_id'] = enrollment_id
+                                                print(df.loc[index, 'enrollment_id'])
+                                                print("=="*50)
+                                                print("=="*50)
+                                                remaining_df.drop(index, inplace=True)
+                                    else:
+                                        
+                                        enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                        # Write to new Column
+                                        print("Closing this loop, finalizing")
+                                        df.loc[index, 'result_message'] = timeout_message
+                                        print(df.loc[index, 'result_message'])
+                                        df.loc[index, 'enrollment_id'] = enrollment_id
+                                        print(df.loc[index, 'enrollment_id'])
+                                        print("=="*50)
+                                        print("=="*50)
+                                        remaining_df.drop(index, inplace=True)
+
+                                else:
+                                    enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                    # Write to new Column
+                                    print("Closing this loop, finalizing")
+                                    df.loc[index, 'result_message'] = timeout_message
+                                    print(df.loc[index, 'result_message'])
+                                    df.loc[index, 'enrollment_id'] = enrollment_id
+                                    print(df.loc[index, 'enrollment_id'])
+                                    print("=="*50)
+                                    print("=="*50)
+                                    remaining_df.drop(index, inplace=True)
+                                    
+                            else:
+                                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                # Write to new Column
+                                print("Closing this loop, finalizing")
+                                df.loc[index, 'result_message'] = timeout_message
+                                print(df.loc[index, 'result_message'])
+                                df.loc[index, 'enrollment_id'] = enrollment_id
+                                print(df.loc[index, 'enrollment_id'])
+                                print("=="*50)
+                                print("=="*50)
+                                remaining_df.drop(index, inplace=True)
+
+                        else:
+                            enrollment_id = coming_enrollment_id.split(": ")[-1]
+                            # Write to new Column
+                            print("Closing this loop, finalizing")
+                            df.loc[index, 'result_message'] = timeout_message
+                            print(df.loc[index, 'result_message'])
+                            df.loc[index, 'enrollment_id'] = enrollment_id
+                            print(df.loc[index, 'enrollment_id'])
+                            print("=="*50)
+                            print("=="*50)
+                            remaining_df.drop(index, inplace=True)
+                else:
+                    print("Timeout")
+                    enrollment_id = "None"
                     print("Closing this loop, finalizing")
-                    df.loc[index, 'result_message'] = message
+                    df.loc[index, 'result_message'] = timeout_message
                     print(df.loc[index, 'result_message'])
                     df.loc[index, 'enrollment_id'] = enrollment_id
                     print(df.loc[index, 'enrollment_id'])
                     print("=="*50)
                     print("=="*50)
                     remaining_df.drop(index, inplace=True)
-                    continue
-                else:
-                    page_2()
-                    consent_form()
-                    consent_popup()
-                    digital_sign()
-                    coming_message = post_popup()
-                    if error_appeared:
-                        print("Error Appeared on Consent Page after submitting Digital Sign")
-                        error_appeared = False
-                        message = coming_message.split("\n")[1]
-                        enrollment_id = coming_enrollment_id.split(": ")[-1]
-                        print("Closing this loop, finalizing")
-                        df.loc[index, 'result_message'] = message
-                        print(df.loc[index, 'result_message'])
-                        df.loc[index, 'enrollment_id'] = enrollment_id
-                        print(df.loc[index, 'enrollment_id'])
-                        print("=="*50)
-                        print("=="*50)
-                        remaining_df.drop(index, inplace=True)
-                        continue
-                    else:
-                        print("Going to Device Page.")
-                        device_type_page()
-                        success_page()
-                        message = coming_message.split("\n")[1]
-                        enrollment_id = coming_enrollment_id.split(": ")[-1]
-                        # Write to new Column
-                        print("Closing this loop, finalizing")
-                        df.loc[index, 'result_message'] = message
-                        print(df.loc[index, 'result_message'])
-                        df.loc[index, 'enrollment_id'] = enrollment_id
-                        print(df.loc[index, 'enrollment_id'])
-                        print("=="*50)
-                        print("=="*50)
-                        remaining_df.drop(index, inplace=True)
             else:
                 print("ZIP/SSN/Phone Data is not valid...")
-                coming_message = """Error
-    ZIP/SSN/Phone is NOT Valid.
-    Ok"""
-                message = coming_message.split("\n")[1]
+                coming_message = "ZIP/SSN/Phone is NOT Valid."
                 enrollment_id = "None"
                 print("Closing this loop, finalizing")
-                df.loc[index, 'result_message'] = message
+                df.loc[index, 'result_message'] = coming_message
                 print(df.loc[index, 'result_message'])
                 df.loc[index, 'enrollment_id'] = enrollment_id
                 print(df.loc[index, 'enrollment_id'])
@@ -119,13 +202,10 @@ Ok"""
                 remaining_df.drop(index, inplace=True)
         else:
             print("Missing zip, SSN, or phone number in person data")
-            coming_message = """Error
-    ZIP/SSN/Phone is NOT Present.
-    Ok"""
-            message = coming_message.split("\n")[1]
+            coming_message = "ZIP/SSN/Phone is NOT Present."
             enrollment_id = "None"
             print("Closing this loop, finalizing")
-            df.loc[index, 'result_message'] = message
+            df.loc[index, 'result_message'] = coming_message
             print(df.loc[index, 'result_message'])
             df.loc[index, 'enrollment_id'] = enrollment_id
             print(df.loc[index, 'enrollment_id'])
@@ -135,6 +215,16 @@ Ok"""
         
     # Save the csv at the FINALLY BLOCK
 
+
+def enough_time(start_time):
+    current_time = time.time()
+    if current_time < start_time + 5 * minute:
+        return True
+    else:
+        print("Its been more than 5 minutes from start time, stopping")
+        return False
+    
+        
 # --------------------------------- Open WebPage -------------------------------------
 def open_page():
     driver.execute_script("window.open('about:blank', '_blank');")
@@ -168,10 +258,14 @@ def login(person):
         zip_code = person["zip"]
         zip_field.send_keys("")
         zip_field.send_keys(zip_code)
-        email_addrs = person["email"]
+       
+        email_addrs = str(person["email"])
+        if "@" not in email_addrs:
+            email_addrs = email_addrs+("@gmail.com")
         email_field.send_keys("")
         email_field.send_keys(email_addrs.replace(" ", ""))
         time.sleep(3)
+        
         submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
         # Check if plans are clickable.
@@ -184,7 +278,18 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[2]/button")))
         # if submit_btn.is_enabled():
         #     time.sleep(2)
-        submit_btn.click()
+        submit_bool = True
+        while submit_bool:
+            if start_time + 5* minute > time.time():
+                print("Clicking Submit button...")
+                try:
+                    submit_btn.click()
+                    submit_bool = False
+                except:
+                    print("Can't Click Submit, trying again...")
+            else:
+                print("Timeout...")
+                return 0
     except TimeoutException:
         try:
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((
@@ -192,9 +297,12 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
             print("We are already on Page 1. Ending Login Here...")
             return 0
         except:
-            print("Login Fields not there... Trying again.")
-            login(person)
-    
+            if start_time + 5* minute < time.time():
+                print("Its 5 minutes since the start, stopping it...")
+                return 0
+            else:
+                print("Login Fields not there, trying again.")
+                login(person)    
     # Check if next page appeared
     try:
         time.sleep(3)
@@ -202,7 +310,11 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/base-info/div/div[2]/mat-card/mat-card-content/div[1]/div[2]/mat-form-field[2]/div[1]/div/div[2]/input"))).send_keys("test")
         print("Calling Login Again, still on start page.")
         email_field.clear()
-        login(person)
+        if start_time + 5* minute < time.time():
+            print("Its 5 minutes since the start, stopping it...")
+            return 0
+        else:
+            login(person)
     except:
         pass
     print("End of LOGIN Fucntion...")
@@ -267,7 +379,12 @@ def page_1(person):
             console.log("DOB now accepts Input..");
 """)
         time.sleep(1)
-        dob = person.dob
+        dob = str(person.dob)
+        try:
+            dob = "/".join([dob.split("/")[1], dob.split("/")[0], dob.split("/")[2]])
+            print("DOB with / separater...")
+        except:
+            print("DOB with - separater, sending directly...")
         dob_field.send_keys(dob)
         print("DOB entered.")
 
@@ -303,15 +420,19 @@ def page_1(person):
             valid = False
         while valid:
             print("Inside the While Loop")
-            try:
-                time.sleep(1)
-                WebDriverWait(driver, 4).until(EC.presence_of_element_located((
-                    By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
-                print("Clicking DON'T VALIDATE...")
-                valid = validate_address()
-            except:
-                print("Address perfectly validated.")
-                valid = False
+            if start_time + 5* minute > time.time():
+                try:
+                    time.sleep(1)
+                    WebDriverWait(driver, 4).until(EC.presence_of_element_located((
+                        By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[3]/mat-card[2]/mat-card-content/address-info/address-inputs/div/div[1]/div/address-select/mat-form-field/div[1]/div/div[2]/input")))
+                    print("Clicking DON'T VALIDATE...")
+                    valid = validate_address()
+                except:
+                    print("Address perfectly validated.")
+                    valid = False
+            else:
+                print("Exceeded the 5 minutes limit. Quit this iteration")
+                return False
     except TimeoutException:
         try:
             WebDriverWait(driver, 4).until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
@@ -371,7 +492,7 @@ def validate_address():
         return False
 
 # --------------------------------- Page 2 Program Select -------------------------------------
-def page_2():
+def page_2(person):
     print("Start of Page # 2 Fucntion...")
     print("="*70)
     try:
@@ -381,8 +502,25 @@ def page_2():
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[2]")))
         
         
+        # If medicaid
+        if "med" in person["program"].lower():
+            print("Choosing Medicai Program.")
+            time.sleep(1)
+            medicaid.click()
+            time.sleep(1)
+
+            eligible_program = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH,
+             "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/div/div/div/mat-form-field/div[1]/div/div[2]/mat-select/div/div[1]")))
+            time.sleep(1)
+            eligible_program.click()
+            time.sleep(1)
+
+            medicaid_drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH,
+             "/html/body/div[3]/div[2]/div/div/mat-option[2]")))
+            medicaid_drop_down.click()
+            print("Medicaid Selected from Drop Down...")
         # If income based...
-        if True:
+        else:
             print("Choosing Income Based Program.")
             time.sleep(1)
             income_based.click()
@@ -393,22 +531,6 @@ def page_2():
             print(f"Entere {people} people in house hold.")
             people_in_house.send_keys("")
             people_in_house.send_keys(people)
-        
-        # If medicaid
-        # else:
-        #     print("Choosing Medicai Program.")
-        #     time.sleep(1)
-        #     medicaid.click()
-        #     time.sleep(1)
-
-        #     eligible_program = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-select-2")))
-        #     time.sleep(1)
-        #     eligible_program.click()
-        #     time.sleep(1)
-
-        #     medicaid_drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-option-4")))
-        #     medicaid_drop_down.click()
-        #     print("Medicaid Selected from Drop Down...")
 
         try:
             submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
@@ -418,15 +540,40 @@ def page_2():
             print("Submitted...")
         except:
             print("Error occured")
+            time.sleep(2)
+            try:
+                if start_time + 5* minute > time.time():
+                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+            By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/mat-radio-group/mat-radio-button[1]")))
+                    print("Still on Page 2, calling funciton again.")
+                    page_2(person)
+                else:
+                    print("Exceeded the Time Limit...")
+                    return 0
+            except:
+                try:
+                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+                        By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card/mat-card-content/button")))
+                    print("We are on consent Page now, calling that...")
+                except:
+                    print("Unknown happened...")
     except TimeoutException:
-        print("Elements not found... Trying agiain...")
-        page_2()
+        if start_time + 5* minute > time.time():
+            print("Elements not found... Trying agiain...")
+            page_2(person)
+        else:
+            print("Exceeded the Time Limit...")
+            return 0
     # Check if next page appeared
     try:
         time.sleep(2)
-        WebDriverWait(driver, 7).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
-        print("Still on page 2, calling PAGE_2 again.")
-        page_2()
+        if start_time + 5* minute > time.time():
+            WebDriverWait(driver, 7).until(EC.presence_of_element_located((By.ID, "mat-radio-7-input"))).click()
+            print("Still on page 2, calling PAGE_2 again.")
+            page_2(person)
+        else:
+            print("Exceeded the Time Limit...")
+            return 0
     except:
         pass
     print("End of Page # 2 Fucntion...")
@@ -492,21 +639,38 @@ def consent_popup():
                 submit_btn.click()
                 print("Submitted.")
             else:
-                print("Consent for is NOT Displayed yet. Waiting...")
-                # time.sleep(10)
-                consent_popup()
+                if start_time + 5*minute > time.time():
+                    print("Consent for is NOT Displayed yet. Waiting...")
+                    # time.sleep(10)
+                    consent_popup()
+                else:
+                    print("Time Out for this loop...")
+                    return 0
         except Exception as e:
-            print(f"Error: {e}")
-            consent_popup()
+            if start_time + 5*minute > time.time():
+                print(f"Error: {e}")
+                consent_popup()
+            else:
+                print("Time Out for this loop...")
+                return 0
+            
     except TimeoutException:
-        print("Form not appeared, trying again.")
-        consent_popup()
+        if start_time + 5*minute > time.time():
+            print("Form not appeared, trying again.")
+            consent_popup()
+        else:
+            print("Time Out for this loop...")
+            return 0
     # Check if still on Consent PopUp Page
     try:
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((
+        if start_time + 5*minute > time.time():
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH, "/html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-consent-dialog/div[2]/div/div[1]/mat-checkbox")))
-        print("Consent Popup still appeared, Calling CONSENT_POPUP again")
-        consent_popup()
+            print("Consent Popup still appeared, Calling CONSENT_POPUP again")
+            consent_popup()
+        else:
+            print("Time Out for this loop...")
+            return 0
     except:
         pass
     print("End of CONSENT_POPUP Fucntion...")
@@ -550,9 +714,13 @@ def digital_sign():
         samoa = time_zone_drop = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/div[3]/div[2]/div/div/mat-option[13]")))
     except Exception as e:
-        print(f"Error:    {e}...")
-        traceback.print_exc()
-        digital_sign()
+        if start_time + 5*minute > time.time():
+            print(f"Error:    {e}...")
+            traceback.print_exc()
+            digital_sign()
+        else:
+            print("Timeout, getting out of loop.")
+            return 0
     
     print("Selecting Eastern Time Zone.")
     eastern.click()
@@ -581,8 +749,13 @@ def digital_sign():
         submit_btn.click()
         print("Submitted.")
     except TimeoutException:
-        print("Digitial Sign Check Box Not found... trying again...")
-        digital_sign()
+        if start_time + 5*minute > time.time():
+            print("Digitial Sign Check Box Not found... trying again...")
+            digital_sign()
+        else:
+            print("Timeout, getting out of loop.")
+            return 0
+        
     
     print("End of DIGITAL_SIGN Fucntion...")
     print("="*70)
@@ -590,7 +763,7 @@ def digital_sign():
 # --------------------------------- Store Final Message -------------------------------------
 def post_popup():
     message = """Error
-N/A
+Error Popup was found but no error message...
 Ok"""
     print("Start of FINAL_MESSAGE Fucntion...")
     print("="*70)
@@ -672,7 +845,7 @@ def error_message():
         print("No error appeared...")
         final_text = "No PopUp Appeared. Hope its Fine."
 
-    print("Start of ERROR_MESSAGE Fucntion...")
+    print("End of ERROR_MESSAGE Fucntion...")
     print("="*70)
 
 # --------------------------------- Driver function for program -------------------------------------
@@ -699,8 +872,11 @@ def device_type_page():
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/app-review/div/div/div[2]/self-enrollment-consent/div/mat-card[2]/mat-card-content/div[4]")))
             print("Still on Consent Page. It means we are not having Deivce Type.")
         except TimeoutException:
-            print("Not on Consent Page, look for Device Options again.")
-            device_type_page()
+            if start_time + 5 * minute > time.time():
+                print("Not on Consent Page, look for Device Options again.")
+                device_type_page()
+            else:
+                print("Timeout....")
     print("Start of DEVICE_TYPE_PAGE Fucntion...")
     print("="*70)
 
@@ -712,12 +888,15 @@ def success_page():
         enroll_id =  WebDriverWait(driver, 10).until(EC.presence_of_element_located((
                 By.XPATH,"/html/body/app-root/new-self-enrollment/div/div/web-enrollment-thanks/div/div/p[1]"))).text
         print("Successful...")
-        coming_message = """Error
+        coming_message = """Good
 Success
 Ok"""
         return enroll_id
     except TimeoutException:
         print("Enrollment ID not found. Try again...")
+        coming_message= """Bad
+On Success Page, but not found the enroll Id... Suspicious
+        oka"""
 
 # --------------------------------- Driver function for program -------------------------------------
 def driver():
@@ -746,8 +925,7 @@ finally:
     print("==="*30)
     driver.quit()
     df.to_csv("output.csv", index=False)
-    remaining_df.to_csv("left_records.csv", index=False)
+    remaining_df.to_csv("input.csv", index=False)
     print("Created Remaining File..")
     print("Created output file.")
-    print("100 Seconds wait...")
-    time.sleep(100)
+    print("===========Finished===========")
