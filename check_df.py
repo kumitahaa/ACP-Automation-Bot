@@ -1,17 +1,24 @@
 import pandas as pd
 
 
-df = pd.read_csv("input.csv", )
+df = pd.read_csv("1st input.csv", )
 for index, person in df.iterrows():
-    dob = str(person["dob"])
-    try:
-        dob = "/".join([dob.split("/")[1], dob.split("/")[0], dob.split("/")[2]])
-        print("DOB with / separater...")
-    except:
-        print("DOB with - separater, sending directly...")
-    print(dob)
-    print("DOB entered.")
-    
+    person["phone"] = str(person["phone"]).split(".")[0]
+    print(person["phone"])
+    # if len(str(((person["zip"])))) == 5 and len(str(((person["ssn"])))) == 4 and len(str(((person["phone"])))) == 10:
+    #     zip = str(person["ssn"])
+    #     print(len(str((zip))))
+    #     print(len(zip))
+    #     print("==="*20)   
+    # else:
+    #     print(person["zip"])
+    #     print(len(str(((person["zip"])))))
+    #     print(person["ssn"])
+    #     print(len(str(((person["ssn"])))))
+    #     print(person["phone"])
+    #     print(len(str(((person["phone"])))))
+    #     print("=======================================================")
+        
     
     
     

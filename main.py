@@ -1,12 +1,10 @@
 # --------------------------------- Import -------------------------------------
-import time, yaml, pandas as pd, random, traceback
+import time, pandas as pd, random, traceback
 from selenium import webdriver as uc
-from datetime import datetime
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.chrome.options import Options
 
 
 # --------------------------------- Initializing Variables -------------------------------------
@@ -66,7 +64,7 @@ Ok"""
                     if coming_enrollment_id == False:
                         print("Error in Details Page...")
                         coming_message = error_message()
-                        if enough_time(start_time):
+                        if not enough_time(start_time):
                             print("TimeOut....")
                             enrollment_id = enroll_id.split(": ")[-1]
                             print("Closing this loop, finalizing")
@@ -381,10 +379,10 @@ def page_1(person):
         time.sleep(1)
         dob = str(person.dob)
         try:
-            dob = "/".join([dob.split("/")[1], dob.split("/")[0], dob.split("/")[2]])
-            print("DOB with / separater...")
+            dob = "/".join([dob.split("-")[1], dob.split("-")[0], dob.split("-")[2]])
+            print("DOB with - separater...")
         except:
-            print("DOB with - separater, sending directly...")
+            print("DOB with OTHER THAN - separater, sending directly...")
         dob_field.send_keys(dob)
         print("DOB entered.")
 
