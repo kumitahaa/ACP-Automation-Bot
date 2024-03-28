@@ -1,5 +1,5 @@
 # --------------------------------- Import -------------------------------------
-import time, pandas as pd, random, traceback
+import time, pandas as pd, random, traceback, os
 from selenium import webdriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,7 +24,7 @@ timeout_message = "This is a timeout error of bot"
 def get_data_from_csv():
     global df, remaining_df
     df = pd.read_csv("input.csv", )
-    df.to_csv("prev_input.csv")
+    df.to_csv("prev_input.csv", index= False)
     remaining_df = df.copy()
     print(df.head())
 
@@ -44,6 +44,16 @@ Something happened, No input, just started now...
 Ok"""
     for index, person in df.iterrows():
         start_time = time.time()
+        try:
+            person["ssn"] = str(person["ssn"]).split(".")[0]
+            print("Fix ssn")
+            person["phone"] = str(person["phone"]).split(".")[0]
+            print("Fix phone")
+            person["zip"] = str(person["zip"]).split(".")[0]
+            print("Fix zip")
+        except:
+            pass
+            
     # Process one row at a time
         print(f"========== Processing {index+1}th Record ==========")
         print(line_break)
@@ -89,8 +99,11 @@ Ok"""
                                         if error_appeared:
                                             print("Error Appeared on Consent Page after submitting Digital Sign")
                                             error_appeared = False
-                                            message = coming_message.split("\n")[1]
-                                            enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                            try:
+                                                message = coming_message.split("\n")[1]
+                                                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                            except:
+                                                pass
                                             print("Closing this loop, finalizing")
                                             df.loc[index, 'result_message'] = message
                                             print(df.loc[index, 'result_message'])
@@ -105,8 +118,11 @@ Ok"""
                                             if enough_time(start_time):
                                                 device_type_page()
                                                 success_page()
-                                                message = coming_message.split("\n")[1]
-                                                enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                                try:
+                                                    message = coming_message.split("\n")[1]
+                                                    enrollment_id = coming_enrollment_id.split(": ")[-1]
+                                                except:
+                                                    pass
                                                 # Write to new Column
                                                 print("Closing this loop, finalizing")
                                                 df.loc[index, 'result_message'] = message
@@ -257,7 +273,7 @@ def login(person):
         zip_field.send_keys("")
         zip_field.send_keys(zip_code)
        
-        email_addrs = str(person["email"])
+        email_addrs = f"""{str(person["first"])}{str(person["first"])}{str(random.randint(100, 999))}@gmail.com"""
         if "@" not in email_addrs:
             email_addrs = email_addrs+("@gmail.com")
         email_field.send_keys("")
@@ -285,6 +301,9 @@ document.getElementsByClassName("mat-mdc-radio-touch-target")[1].click();
                     submit_bool = False
                 except:
                     print("Can't Click Submit, trying again...")
+                    time.sleep(10)
+                    # Add a Login Page Error here...
+                    # /html/body/div[3]/div[2]/div/mat-dialog-container/div/div/app-confirmation-dialog/h1
             else:
                 print("Timeout...")
                 return 0
@@ -379,17 +398,20 @@ def page_1(person):
         time.sleep(1)
         dob = str(person.dob)
         try:
-            dob = "/".join([dob.split("-")[1], dob.split("-")[0], dob.split("-")[2]])
-            print("DOB with - separater...")
+            dob = "/".join([dob.split("/")[1], dob.split("/")[0], dob.split("/")[2]])
+            print("DOB with / separater...")
         except:
-            print("DOB with OTHER THAN - separater, sending directly...")
+            print("DOB with OTHER THAN / separater, sending directly...")
         dob_field.send_keys(dob)
         print("DOB entered.")
-
+        
         time.sleep(1)
-        submit_btn.click()
-        print("clicked submit")
-        time.sleep(1)
+        try:
+            submit_btn.click()
+            print("clicked submit")
+            time.sleep(1)
+        except:
+            print("Couldn't click submit button on Details page.")
         
         # Check for Error
         try:
@@ -412,7 +434,7 @@ def page_1(person):
                 submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
             By.XPATH, "/html/body/app-root/new-self-enrollment/div/div/customer-info/div/div/div[4]/button")))
                 submit_btn.click()
-        except TimeoutException:
+        except:
             # print("Submitted...")
             print("Address perfectly validated.")
             valid = False
@@ -501,34 +523,37 @@ def page_2(person):
         
         
         # If medicaid
-        if "med" in person["program"].lower():
+        # if "med" in person["program"].lower():
+        try:
             print("Choosing Medicai Program.")
             time.sleep(1)
             medicaid.click()
             time.sleep(1)
 
             eligible_program = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH,
-             "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/div/div/div/mat-form-field/div[1]/div/div[2]/mat-select/div/div[1]")))
+                "/html/body/app-root/new-self-enrollment/div/div/app-program/div/div[2]/div[1]/mat-card/mat-card-content/div/div/div/div/mat-form-field/div[1]/div/div[2]/mat-select/div/div[1]")))
             time.sleep(1)
             eligible_program.click()
             time.sleep(1)
 
             medicaid_drop_down = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH,
-             "/html/body/div[3]/div[2]/div/div/mat-option[2]")))
+                "/html/body/div[3]/div[2]/div/div/mat-option[2]")))
             medicaid_drop_down.click()
             print("Medicaid Selected from Drop Down...")
-        # If income based...
-        else:
-            print("Choosing Income Based Program.")
-            time.sleep(1)
-            income_based.click()
-            time.sleep(1)
+        except:
+            print("Couldn't select medicare option...")
+    # If income based...
+        # else:
+        #     print("Choosing Income Based Program.")
+        #     time.sleep(1)
+        #     income_based.click()
+        #     time.sleep(1)
 
-            people_in_house = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-input-12")))
-            people = str(random.randint(2, 5))
-            print(f"Entere {people} people in house hold.")
-            people_in_house.send_keys("")
-            people_in_house.send_keys(people)
+        #     people_in_house = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "mat-input-12")))
+        #     people = str(random.randint(2, 5))
+        #     print(f"Entere {people} people in house hold.")
+        #     people_in_house.send_keys("")
+        #     people_in_house.send_keys(people)
 
         try:
             submit_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((
@@ -639,7 +664,7 @@ def consent_popup():
             else:
                 if start_time + 5*minute > time.time():
                     print("Consent for is NOT Displayed yet. Waiting...")
-                    # time.sleep(10)
+                    time.sleep(10)
                     consent_popup()
                 else:
                     print("Time Out for this loop...")
@@ -896,6 +921,16 @@ Ok"""
 On Success Page, but not found the enroll Id... Suspicious
         oka"""
 
+# --------------------------------- Function for file names -------------------------------------
+def find_non_existing_file(file_name):
+    counter = 1
+    while os.path.exists(file_name):
+        base, ext = os.path.splitext(file_name)
+        file_name = f"{base}_{counter}{ext}"
+        counter += 1
+    return file_name
+
+
 # --------------------------------- Driver function for program -------------------------------------
 def driver():
     init()
@@ -922,7 +957,18 @@ finally:
     print("==="*30)
     print("==="*30)
     driver.quit()
-    df.to_csv("output.csv", index=False)
+    
+    filtered_df = df[(df['enrollment_id'].notna()) & (df['result_message'].notna())]
+  
+    output_file = "output_1.csv"
+
+    # Check if file already exists and find a non-existing file name
+    output_file = find_non_existing_file(output_file)
+
+    # Save the filtered DataFrame to a CSV file without including the index
+    filtered_df.to_csv(output_file, index=False)
+
+
     remaining_df.to_csv("input.csv", index=False)
     print("Created Remaining File..")
     print("Created output file.")
