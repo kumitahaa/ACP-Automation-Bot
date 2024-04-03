@@ -1,5 +1,5 @@
 # --------------------------------- Import -------------------------------------
-import time, yaml, pandas as pd, random
+import time, pandas as pd, random, os
 from selenium import webdriver as uc
 from datetime import datetime
 from selenium.webdriver.common.by import By
@@ -12,12 +12,20 @@ from selenium.webdriver.support import expected_conditions as EC
 # --------------------------------- Initializing Variables -------------------------------------
 final_text = ""
 driver = ""
+df = ""
 person = []
+remaining_df = ""
 line_break = "=" * 60
+minute = 60
+timeout_message = "This is a timeout error of bot"
+start_time = time.time()
 
 def get_data_from_csv():
-    global person
-    person = pd.read_csv("person.csv", index_col= None)
+    global df, remaining_df
+    df = pd.read_csv("input.csv", )
+    df.to_csv("prev_input.csv", index= False)
+    remaining_df = df.copy()
+    print(df.head())
 
 
 # --------------------------------- Initialize if not VPN -------------------------------------
@@ -32,16 +40,60 @@ def init():
 
 
 # --------------------------------- Starts from Here -------------------------------------
-def start(input_names, state_name=""):
-    pass
+def start():
+    for index, person in df.iterrows():
+        open_page()
+        print("OPEN_PAGE compelte")
+        time.sleep(1)
+        login()
+        print("LOGIN compelte")
+        time.sleep(1)
+        page_1()
+        print("PAGE # 1 compelte")
+        time.sleep(1)
+        page_2()
+        print("PAGE # 2 compelte")
+        time.sleep(1)
+        living_with_18_q()
+        print("LIVING 18 yr/0 compelte")
+        time.sleep(1)
+        they_get_acp_q()
+        print("THEY GET ACP compelte")
+        time.sleep(1)
+        choose_plan()
+        print("CHOOSE PLAN compelte")
     
+
+
+def enough_time(start_time):
+    current_time = time.time()
+    if current_time < start_time + 5 * minute:
+        return True
+    else:
+        print("Its been more than 5 minutes from start time, stopping")
+        return False
+    
+
 
 # --------------------------------- Open WebPage -------------------------------------
 def open_page():
-    print("Start of OPEN_PAGE Fucntion...")
+    driver.execute_script("window.open('about:blank', '_blank');")
+    
+    driver.switch_to.window(driver.window_handles[-1])
+    
     search_url = f"https://maxsipconnects-web.telgoo5.com/BUYFLOW/?wy4eJo0upYNGlirge3PUgBw2rS90yAf1aR90o2QmtzI"
     driver.get(search_url)
-    print("Opened WebPage...")
+    print("Opened WebPage in new tab...")
+    print("="*70)
+    
+    # Close all other tabs except the new one
+    for handle in driver.window_handles[:-1]:
+        driver.switch_to.window(handle)
+        driver.close()
+    
+    # Switch back to the new tab
+    driver.switch_to.window(driver.window_handles[-1])
+    
 
 
 # --------------------------------- Login -------------------------------------
@@ -266,12 +318,17 @@ def complete_popup():
     print("Start of COMPLETE_POPUP Fucntion...")
     try:
         global final_text
-        popup = WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.CLASS_NAME, "swal-modal")))
-        ok_btn = WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.CLASS_NAME, "swal-button")))
-        final_text = popup.text
-        print(final_text)
-        time.sleep(1)
-        ok_btn.click()
+        popup = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/div[6]/div/div/div[1]/h4")))
+        ok_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "swal-button")))
+        print("Got Popup...")
+        try:
+            print("Trying to Click...")
+            final_text = popup.text
+            print(final_text)
+            time.sleep(1)
+            ok_btn.click()
+        except:
+            print("Can't Click Okay Button...")
     except TimeoutException:
         print("Popup not found... Trying agiain...")
         complete_popup()
@@ -296,33 +353,21 @@ def income_based_detail():
         print("Elements not found... Trying agiain...")
         income_based_detail()
     print("End of ICOME_BASED Fucntion...")
-    
-    
+
+# --------------------------------- Function for file names -------------------------------------
+def find_non_existing_file(file_name):
+    counter = 1
+    while os.path.exists(file_name):
+        base, ext = os.path.splitext(file_name)
+        file_name = f"{base}_{counter}{ext}"
+        counter += 1
+    return file_name
+ 
     
 def driver():
     init()
-    time.sleep(1)
-    print("INIT compelte")
-    open_page()
-    print("OPEN_PAGE compelte")
-    time.sleep(1)
-    login()
-    print("LOGIN compelte")
-    time.sleep(1)
-    page_1()
-    print("PAGE # 1 compelte")
-    time.sleep(1)
-    page_2()
-    print("PAGE # 2 compelte")
-    time.sleep(1)
-    living_with_18_q()
-    print("LIVING 18 yr/0 compelte")
-    time.sleep(1)
-    they_get_acp_q()
-    print("THEY GET ACP compelte")
-    time.sleep(1)
-    choose_plan()
-    print("CHOOSE PLAN compelte")
+    get_data_from_csv()
+    start()
 
 try:
     driver()
@@ -331,5 +376,25 @@ except:
 else:
     pass
 finally:
-    print("Finally Block...")
+    print("==="*30)
+    print("==="*30)
+    print("ENDING.... FINALLY...")
+    print("==="*30)
+    print("==="*30)
     driver.quit()
+    
+    filtered_df = df[(df['enrollment_id'].notna()) & (df['result_message'].notna())]
+  
+    output_file = "output.csv"
+
+    # Check if file already exists and find a non-existing file name
+    output_file = find_non_existing_file(output_file)
+
+    # Save the filtered DataFrame to a CSV file without including the index
+    filtered_df.to_csv(output_file, index=False)
+
+
+    remaining_df.to_csv("input.csv", index=False)
+    print("Created Remaining File..")
+    print("Created output file.")
+    print("===========Finished===========")
